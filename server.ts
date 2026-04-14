@@ -6,11 +6,26 @@ import axios from 'axios';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import fs from 'fs';
+import { createClient } from "@supabase/supabase-js";
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Supabase Setup
+let supabaseInstance: any = null;
+const getSupabase = () => {
+  if (!supabaseInstance) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required in environment variables.');
+    }
+    supabaseInstance = createClient(supabaseUrl, supabaseKey);
+  }
+  return supabaseInstance;
+};
 
 // Helper for JSON Database
 const dbPath = (name: string) => path.join(process.cwd(), 'data', `${name}.json`);
@@ -263,15 +278,15 @@ async function startServer() {
     }
   });
 
-  // API: Create VIPayment Invoice
-  app.post('/api/vipayment/create', async (req, res) => {
-    console.log('[POST] /api/vipayment/create');
+  // API: Checkout (Codashop Style)
+  app.post('/api/checkout', async (req, res) => {
+    console.log("CHECKOUT REQUEST:", req.body);
     try {
-      const { userId, zoneId, phoneNumber, sku, productName, price, paymentMethod } = req.body;
+      const { userId, zoneId, phoneNumber, sku, productName, nominal, metode } = req.body;
       const settings = readJSON('settings', {});
       
       if (!settings?.vipaymentApiKey || !settings?.vipaymentMerchantId) {
-        return res.status(400).json({ success: false, error: 'VIPayment API belum dikonfigurasi' });
+        return res.status(400).json({ status: "error", message: 'VIPayment API belum dikonfigurasi' });
       }
 
       const timestamp = Date.now();
@@ -281,25 +296,46 @@ async function startServer() {
         key: settings.vipaymentApiKey,
         merchant: settings.vipaymentMerchantId,
         ref_id: ref_id,
-        nominal: price,
-        metode: paymentMethod,
+        nominal: nominal,
+        metode: metode,
         customer_name: userId || "Guest",
         customer_phone: phoneNumber
       };
 
       console.log("VIP REQUEST:", payload);
 
-      const response = await axios.post('https://vipayment.com/api/v1/order', payload);
+      const response = await axios.post('https://zijddnkpfadirqwtxmmk.supabase.co/functions/v1/vip-payment', payload);
       console.log("VIP RESPONSE:", response.data);
 
       if (response.data?.success) {
         const paymentData = response.data.data;
+        const paymentUrl = paymentData.checkout_url || paymentData.payment_url || paymentData.checkout_link;
+        const qrString = paymentData.qr_string || paymentData.qr_data || paymentData.qr_code;
+
+        // 1. Save to Supabase (Initial Record)
+        const { error: dbError } = await getSupabase()
+          .from('transaksi')
+          .upsert({
+            ref_id: ref_id,
+            status_vip: 'pending',
+            nominal: nominal,
+            metode: metode,
+            product_sku: sku,
+            product_name: productName,
+            customer_no: zoneId ? `${userId}(${zoneId})` : userId,
+            phone_number: phoneNumber,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'ref_id' });
+
+        if (dbError) console.error("SUPABASE ERROR:", dbError.message);
+
+        // 2. Save to local JSON (Backup)
         const newTransaction = {
           id: ref_id,
-          userId, zoneId, phoneNumber, sku, productName, price, paymentMethod,
+          userId, zoneId, phoneNumber, sku, productName, price: nominal, paymentMethod: metode,
           status: 'pending',
-          paymentUrl: paymentData.checkout_url || paymentData.payment_url || paymentData.checkout_link,
-          qrString: paymentData.qr_string || paymentData.qr_data || paymentData.qr_code,
+          paymentUrl,
+          qrString,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
@@ -309,72 +345,103 @@ async function startServer() {
         writeJSON('transactions', transactions);
 
         res.status(200).json({ 
-          success: true, 
-          payment_url: newTransaction.paymentUrl,
-          qr: newTransaction.qrString,
+          status: "ok", 
+          payment_url: paymentUrl,
+          qr: qrString,
           transactionId: ref_id
         });
       } else {
         res.status(400).json({ 
-          success: false, 
-          error: response.data?.message || response.data?.error || 'Gagal membuat invoice VIPayment' 
+          status: "error", 
+          message: response.data?.message || response.data?.error || 'Gagal membuat invoice VIPayment' 
         });
       }
     } catch (error: any) {
-      console.error('[VIP] Create Error:', error.response?.data || error.message);
+      console.log("CHECKOUT ERROR:", error.message);
       const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message;
       res.status(error.response?.status || 500).json({ 
-        success: false, 
-        error: errorMessage
+        status: "error", 
+        message: errorMessage
       });
     }
   });
 
-  // API: VIPayment Callback
-  app.post('/api/vip-callback', async (req, res) => {
-    console.log('[POST] /api/vip-callback');
+  // API: VIPayment Callback (Backup/Local)
+  app.all('/api/vip-callback', async (req, res) => {
+    if (req.method === 'GET') {
+      return res.status(200).json({ status: "ok", message: "API aktif" });
+    }
+
     try {
-      const { merchant_ref, status } = req.body;
+      const data = req.body;
+      console.log("[CALLBACK] Received:", JSON.stringify(data));
+
+      if (!data || Object.keys(data).length === 0) {
+        return res.status(400).json({ status: "error", message: "Data callback kosong" });
+      }
+
+      const { merchant_ref, status, ref_id } = data;
+      const ref = merchant_ref || ref_id;
+
+      if (!ref) {
+        return res.status(400).json({ status: "error", message: "Reference ID tidak ditemukan" });
+      }
+
       const transactions = readJSON('transactions', []);
-      const index = transactions.findIndex((t: any) => t.id === merchant_ref);
+      const index = transactions.findIndex((t: any) => t.id === ref);
       
-      if (index === -1) return res.status(404).json({ success: false, error: 'Not found' });
+      const isPaid = ['PAID', 'Success', 'success'].includes(status);
+      const newStatus = isPaid ? 'success' : (['FAILED', 'failed'].includes(status) ? 'failed' : 'pending');
       
-      const transData = transactions[index];
-      const isPaid = status === 'PAID' || status === 'Success';
-      const newStatus = isPaid ? 'success' : (status === 'FAILED' ? 'failed' : 'pending');
-      
-      if (transData.status === 'success') {
-        return res.status(200).json({ success: true, message: 'Already processed' });
-      }
-
-      transactions[index].status = newStatus;
-      transactions[index].updatedAt = new Date().toISOString();
-      writeJSON('transactions', transactions);
-
-      if (isPaid) {
-        const settings = readJSON('settings', {});
-        if (settings?.digiflazzUsername && settings?.digiflazzApiKey) {
-          const sign = crypto.createHash('md5').update(settings.digiflazzUsername + settings.digiflazzApiKey + merchant_ref).digest('hex');
-          try {
-            const digiRes = await axios.post('https://api.digiflazz.com/v1/transaction', {
-              username: settings.digiflazzUsername,
-              buyer_sku_code: transData.sku,
-              customer_no: transData.zoneId ? `${transData.userId}${transData.zoneId}` : transData.userId,
-              ref_id: merchant_ref,
-              sign
-            });
-            console.log('[DIGIFLAZZ] Order Response:', digiRes.data);
-          } catch (digiErr: any) {
-            console.error('[DIGIFLAZZ] Order Error:', digiErr.response?.data || digiErr.message);
-          }
-          await sendWhatsApp(transData.phoneNumber, `Halo! Pembayaran INV ${merchant_ref} BERHASIL.\nPesanan ${transData.productName} sedang diproses.\nTerima kasih!`);
+      if (index !== -1) {
+        if (transactions[index].status === 'success') {
+          return res.status(200).json({ status: "success", message: "Callback diterima (Sudah diproses)" });
         }
+
+        transactions[index].status = newStatus;
+        transactions[index].updatedAt = new Date().toISOString();
+        transactions[index].raw_callback = data;
+        writeJSON('transactions', transactions);
+
+        if (isPaid) {
+          const transData = transactions[index];
+          const settings = readJSON('settings', {});
+          if (settings?.digiflazzUsername && settings?.digiflazzApiKey) {
+            const sign = crypto.createHash('md5').update(settings.digiflazzUsername + settings.digiflazzApiKey + ref).digest('hex');
+            try {
+              const digiRes = await axios.post('https://api.digiflazz.com/v1/transaction', {
+                username: settings.digiflazzUsername,
+                buyer_sku_code: transData.sku,
+                customer_no: transData.zoneId ? `${transData.userId}${transData.zoneId}` : transData.userId,
+                ref_id: ref,
+                sign
+              });
+              console.log('[DIGIFLAZZ] Order Response:', digiRes.data);
+            } catch (digiErr: any) {
+              console.error('[DIGIFLAZZ] Order Error:', digiErr.response?.data || digiErr.message);
+            }
+            await sendWhatsApp(transData.phoneNumber, `Halo! Pembayaran INV ${ref} BERHASIL.\nPesanan ${transData.productName} sedang diproses.\nTerima kasih!`);
+          }
+        }
+      } else {
+        // Log unknown transaction but store it for audit
+        const newEntry = {
+          id: ref,
+          status: newStatus,
+          nominal: data.nominal || 0,
+          metode: data.metode || 'Unknown',
+          raw: data,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        transactions.push(newEntry);
+        writeJSON('transactions', transactions);
       }
-      res.status(200).json({ success: true });
+
+      res.status(200).json({ status: "success", message: "Callback diterima" });
     } catch (error: any) {
-      console.error('[CALLBACK] Error:', error.message);
-      res.status(500).json({ success: false, error: error.message });
+      console.error('[CALLBACK] Fatal Error:', error.message);
+      res.status(500).json({ status: "error", message: error.message });
     }
   });
 

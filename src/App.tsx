@@ -12,12 +12,12 @@ export default function App() {
     <Router>
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <main className="flex-grow container mx-auto px-4 py-8">
+        <main className="flex-grow">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/product/:brand" element={<ProductDetail />} />
-            <Route path="/cek-status" element={<Status />} />
-            <Route path="/admin" element={<Admin />} />
+            <Route path="/product/:brand" element={<div className="container mx-auto px-4 py-8"><ProductDetail /></div>} />
+            <Route path="/cek-status" element={<div className="container mx-auto px-4 py-8"><Status /></div>} />
+            <Route path="/admin" element={<div className="container mx-auto px-4 py-8"><Admin /></div>} />
           </Routes>
         </main>
         <Footer />

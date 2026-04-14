@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Gamepad2, Smartphone, Zap, Wallet, Ticket } from 'lucide-react';
+import { motion } from 'motion/react';
 
 const CATEGORIES = [
   { id: 'Game', icon: Gamepad2, label: 'Games' },
@@ -48,75 +46,100 @@ export default function Home() {
   };
 
   return (
-    <div className="space-y-12">
+    <div className="pb-20">
       {/* Hero Section */}
-      <section className="relative h-[300px] rounded-3xl overflow-hidden flex items-center justify-center text-center px-4">
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-600/20 to-blue-900/40 z-0" />
-        <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/gaming/1920/1080')] bg-cover bg-center opacity-20 z-[-1]" />
-        <div className="relative z-10 max-w-2xl space-y-4">
-          <h1 className="text-4xl md:text-6xl font-black tracking-tight">
-            Top Up <span className="gradient-text">Kilat</span> & <span className="gradient-text">Murah</span>
-          </h1>
-          <p className="text-slate-400 text-lg">
-            Layanan top up game dan produk digital terlengkap di Indonesia. 
-            Proses otomatis 24 jam nonstop.
-          </p>
+      <section className="relative overflow-hidden bg-[#121212] py-12 md:py-20 mb-8">
+        <div className="absolute inset-0 bg-gradient-to-r from-[#ff6b00]/20 to-transparent z-0" />
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-2xl">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-3xl md:text-5xl font-black text-white leading-tight mb-4"
+            >
+              Top Up Game <br />
+              <span className="text-[#ff6b00]">Murah & Instan</span>
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-gray-400 text-sm md:text-base max-w-md"
+            >
+              Layanan top up game dan produk digital terlengkap. 
+              Proses otomatis 24 jam nonstop.
+            </motion.p>
+          </div>
         </div>
       </section>
 
-      {/* Categories Tabs */}
-      <Tabs defaultValue="Game" className="w-full" onValueChange={setActiveTab}>
-        <div className="flex justify-center mb-8">
-          <TabsList className="glass p-1 h-auto flex-wrap justify-center gap-2">
-            {CATEGORIES.map(cat => (
-              <TabsTrigger 
-                key={cat.id} 
-                value={cat.id}
-                className="data-[state=active]:bg-orange-500 data-[state=active]:text-white rounded-xl px-6 py-3 flex items-center gap-2 transition-all"
-              >
-                <cat.icon className="w-5 h-5" />
-                <span className="font-medium">{cat.label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+      <div className="container mx-auto px-4">
+        {/* Categories Horizontal Scroll */}
+        <div className="flex items-center gap-3 overflow-x-auto pb-6 no-scrollbar mb-8">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveTab(cat.id)}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-full whitespace-nowrap font-bold transition-all ${
+                activeTab === cat.id 
+                ? 'bg-[#ff6b00] text-white shadow-lg shadow-[#ff6b00]/20' 
+                : 'bg-white text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <cat.icon className="w-4 h-4" />
+              {cat.label}
+            </button>
+          ))}
         </div>
 
-        {CATEGORIES.map(cat => (
-          <TabsContent key={cat.id} value={cat.id} className="mt-0">
-            {loading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                {[...Array(12)].map((_, i) => (
-                  <Skeleton key={i} className="h-48 w-full rounded-2xl bg-white/5" />
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                {getBrands(cat.id).map((brand: any) => (
-                  <Link key={brand} to={`/product/${encodeURIComponent(brand as string)}`}>
-                    <Card className="glass-card hover:border-orange-500/50 transition-all group cursor-pointer h-full flex flex-col items-center justify-center text-center gap-4 p-4">
-                      <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-slate-800 flex items-center justify-center">
-                        <img 
-                          src={getLogo(brand)} 
-                          alt={brand}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                          referrerPolicy="no-referrer"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/game/200/200';
-                          }}
-                        />
+        {/* Product Grid */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black text-[#121212] flex items-center gap-2">
+              <div className="w-2 h-6 bg-[#ff6b00] rounded-full" />
+              Daftar {activeTab}
+            </h2>
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+              {[...Array(12)].map((_, i) => (
+                <Skeleton key={i} className="aspect-square w-full rounded-2xl bg-white" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+              {getBrands(activeTab).map((brand: any) => (
+                <Link key={brand} to={`/product/${encodeURIComponent(brand as string)}`}>
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:shadow-[#ff6b00]/10 border border-transparent hover:border-[#ff6b00]/30 transition-all group cursor-pointer h-full flex flex-col"
+                  >
+                    <div className="aspect-square relative overflow-hidden bg-gray-100">
+                      <img 
+                        src={getLogo(brand)} 
+                        alt={brand}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${brand}/400/400`;
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                        <span className="text-white text-xs font-bold">Top Up Sekarang</span>
                       </div>
-                      <div className="space-y-1">
-                        <h3 className="font-bold text-sm line-clamp-1">{brand}</h3>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">{cat.id}</p>
-                      </div>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+                    </div>
+                    <div className="p-3 md:p-4 flex-1 flex flex-col justify-center">
+                      <h3 className="font-bold text-sm md:text-base text-[#121212] line-clamp-1 group-hover:text-[#ff6b00] transition-colors">{brand}</h3>
+                      <p className="text-[10px] md:text-xs text-gray-400 font-medium uppercase tracking-wider">{activeTab}</p>
+                    </div>
+                  </motion.div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

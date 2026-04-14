@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { RefreshCw, Settings, ListOrdered, Save, Loader2, Lock, LogOut } from 'lucide-react';
+import { RefreshCw, Settings, ListOrdered, Save, Loader2, Lock, LogOut, ChevronRight, MessageCircle } from 'lucide-react';
 import axios from 'axios';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function Admin() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -75,11 +75,9 @@ export default function Admin() {
 
     async function fetchData() {
       try {
-        // Fetch Transactions
         const transRes = await axios.get('/api/admin/transactions');
         setTransactions(transRes.data);
 
-        // Fetch Settings
         const settingsRes = await axios.get('/api/settings');
         const data = settingsRes.data;
         setDigiflazzUsername(data.digiflazzUsername || "");
@@ -103,75 +101,86 @@ export default function Admin() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-        <p className="text-slate-400">Memuat data...</p>
+        <Loader2 className="w-8 h-8 animate-spin text-[#ff6b00]" />
+        <p className="text-gray-400 font-bold">Memuat data admin...</p>
       </div>
     );
   }
 
   if (!customAuth) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[500px] px-4">
-        <Card className="glass-card w-full max-w-md">
-          <CardHeader className="text-center space-y-2">
-            <div className="w-16 h-16 bg-orange-500/10 rounded-2xl flex items-center justify-center mx-auto mb-2">
-              <Lock className="w-8 h-8 text-orange-500" />
+      <div className="flex flex-col items-center justify-center min-h-[600px] px-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-[40px] w-full max-w-md p-8 md:p-10 shadow-2xl shadow-black/5 border border-gray-100"
+        >
+          <div className="text-center space-y-4 mb-10">
+            <div className="w-20 h-20 bg-[#ff6b00]/10 rounded-[30px] flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-10 h-10 text-[#ff6b00]" />
             </div>
-            <CardTitle className="text-2xl font-bold">Admin Login</CardTitle>
-            <p className="text-sm text-slate-400">Gunakan Username, Password & OTP WhatsApp</p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCustomLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Username</Label>
-                <Input 
-                  placeholder="Masukkan username"
-                  value={loginForm.username}
-                  onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                  className="glass border-white/10"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Kata Sandi</Label>
-                <Input 
-                  type="password"
-                  placeholder="Masukkan kata sandi"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  className="glass border-white/10"
-                  required
-                />
-              </div>
-              
+            <h1 className="text-3xl font-black text-[#121212]">Admin Panel</h1>
+            <p className="text-sm text-gray-400 font-medium">Gunakan kredensial admin & OTP WhatsApp</p>
+          </div>
+
+          <form onSubmit={handleCustomLogin} className="space-y-6">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-gray-400 ml-1">Username</Label>
+              <Input 
+                placeholder="Masukkan username"
+                value={loginForm.username}
+                onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                className="h-14 rounded-2xl border-gray-200 focus:border-[#ff6b00] focus:ring-[#ff6b00]/20 font-bold"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-gray-400 ml-1">Kata Sandi</Label>
+              <Input 
+                type="password"
+                placeholder="Masukkan kata sandi"
+                value={loginForm.password}
+                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                className="h-14 rounded-2xl border-gray-200 focus:border-[#ff6b00] focus:ring-[#ff6b00]/20 font-bold"
+                required
+              />
+            </div>
+            
+            <AnimatePresence>
               {otpSent ? (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                  <Label>Kode OTP (Cek WhatsApp)</Label>
-                  <Input 
-                    placeholder="6 Digit Kode OTP"
-                    value={loginForm.otp}
-                    onChange={(e) => setLoginForm({ ...loginForm, otp: e.target.value })}
-                    className="glass border-white/10"
-                    required
-                  />
-                  <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 mt-4">
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase text-gray-400 ml-1">Kode OTP (WhatsApp)</Label>
+                    <Input 
+                      placeholder="6 Digit Kode OTP"
+                      value={loginForm.otp}
+                      onChange={(e) => setLoginForm({ ...loginForm, otp: e.target.value })}
+                      className="h-14 rounded-2xl border-gray-200 focus:border-[#ff6b00] focus:ring-[#ff6b00]/20 font-black text-center text-2xl tracking-widest"
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full h-14 bg-[#ff6b00] hover:bg-[#e66000] text-white font-black rounded-2xl shadow-xl shadow-[#ff6b00]/20 transition-all">
                     Verifikasi & Masuk
                   </Button>
-                </div>
+                </motion.div>
               ) : (
                 <Button 
                   type="button" 
                   onClick={handleSendOtp}
                   disabled={sendingOtp}
-                  className="w-full bg-orange-500 hover:bg-orange-600 mt-4"
+                  className="w-full h-14 bg-[#ff6b00] hover:bg-[#e66000] text-white font-black rounded-2xl shadow-xl shadow-[#ff6b00]/20 transition-all"
                 >
-                  {sendingOtp ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  {sendingOtp ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
                   Kirim OTP ke WhatsApp
                 </Button>
               )}
-            </form>
-          </CardContent>
-        </Card>
+            </AnimatePresence>
+          </form>
+        </motion.div>
       </div>
     );
   }
@@ -191,7 +200,6 @@ export default function Admin() {
         toast.error(res.data.message || 'Gagal sinkronisasi produk');
       }
     } catch (error: any) {
-      console.error('Sync Error:', error);
       toast.error(error.response?.data?.message || error.response?.data?.error || 'Gagal sinkronisasi produk');
     } finally {
       setSyncing(false);
@@ -199,7 +207,6 @@ export default function Admin() {
   };
 
   const handleSaveSettings = async () => {
-    // Validation
     if (!whatsapp || !/^\d+$/.test(whatsapp)) {
       toast.error('WhatsApp harus berupa angka');
       return;
@@ -225,7 +232,6 @@ export default function Admin() {
         toast.error('Gagal menyimpan');
       }
     } catch (error) {
-      console.error('Save Settings Error:', error);
       toast.error('Gagal menyimpan');
     }
   };
@@ -241,195 +247,198 @@ export default function Admin() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Admin Panel</h1>
-        <div className="flex gap-4">
-          <Button onClick={handleLogout} variant="outline" className="border-red-500/50 text-red-500 hover:bg-red-500/10">
+    <div className="space-y-10 py-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-black text-[#121212]">Admin Dashboard</h1>
+          <p className="text-gray-500 font-medium">Kelola transaksi, produk, dan pengaturan sistem.</p>
+        </div>
+        <div className="flex gap-3">
+          <Button onClick={handleLogout} variant="outline" className="h-12 rounded-xl border-red-100 text-red-500 hover:bg-red-50 font-bold">
             <LogOut className="w-4 h-4 mr-2" />
             Logout
           </Button>
-          <Button onClick={handleSync} disabled={syncing} className="bg-orange-500">
+          <Button onClick={handleSync} disabled={syncing} className="h-12 rounded-xl bg-[#ff6b00] hover:bg-[#e66000] text-white font-black shadow-lg shadow-[#ff6b00]/20">
             {syncing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-            Sync Digiflazz
+            Sync Produk
           </Button>
         </div>
       </div>
 
       <Tabs defaultValue="transactions" className="w-full">
-        <TabsList className="glass mb-8">
-          <TabsTrigger value="transactions" className="flex items-center gap-2">
-            <ListOrdered className="w-4 h-4" />
+        <TabsList className="bg-gray-100 p-1 rounded-2xl mb-8">
+          <TabsTrigger value="transactions" className="rounded-xl px-8 py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm font-black text-sm">
+            <ListOrdered className="w-4 h-4 mr-2" />
             Transaksi
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
+          <TabsTrigger value="settings" className="rounded-xl px-8 py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm font-black text-sm">
+            <Settings className="w-4 h-4 mr-2" />
             Pengaturan
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="transactions">
-          <Card className="glass-card">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="border-b border-white/10 text-xs uppercase text-slate-400">
-                    <tr>
-                      <th className="p-4">ID / Waktu</th>
-                      <th className="p-4">Produk / User</th>
-                      <th className="p-4">Harga / Payment</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4">Aksi</th>
+          <div className="bg-white rounded-[32px] overflow-hidden shadow-sm border border-gray-100">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">ID / Waktu</th>
+                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Produk / User</th>
+                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Harga / Payment</th>
+                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Status</th>
+                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {transactions.map((t) => (
+                    <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="p-6">
+                        <div className="font-black text-[#121212] text-xs">{t.id}</div>
+                        <div className="text-gray-400 text-[10px] font-medium">{new Date(t.createdAt).toLocaleString()}</div>
+                      </td>
+                      <td className="p-6">
+                        <div className="font-black text-[#121212]">{t.productName}</div>
+                        <div className="text-gray-500 text-xs font-bold">{t.userId}</div>
+                      </td>
+                      <td className="p-6">
+                        <div className="font-black text-[#ff6b00]">Rp {t.price.toLocaleString()}</div>
+                        <div className="text-gray-400 text-[10px] font-bold uppercase">{t.paymentMethod}</div>
+                      </td>
+                      <td className="p-6">
+                        <Badge className={`font-black rounded-full px-4 py-1 ${
+                          t.status === 'success' ? 'bg-green-500 text-white' : 
+                          t.status === 'failed' ? 'bg-red-500 text-white' : 'bg-[#ff6b00] text-white'
+                        }`}>
+                          {t.status}
+                        </Badge>
+                      </td>
+                      <td className="p-6">
+                        <div className="flex gap-2">
+                          <Button size="sm" className="h-9 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold text-[10px]" onClick={() => updateStatus(t.id, 'success')}>Success</Button>
+                          <Button size="sm" className="h-9 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-[10px]" onClick={() => updateStatus(t.id, 'failed')}>Failed</Button>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {transactions.map((t) => (
-                      <tr key={t.id} className="text-sm hover:bg-white/5 transition-colors">
-                        <td className="p-4">
-                          <div className="font-mono text-xs">{t.id}</div>
-                          <div className="text-slate-500 text-[10px]">{new Date(t.createdAt).toLocaleString()}</div>
-                        </td>
-                        <td className="p-4">
-                          <div className="font-bold">{t.productName}</div>
-                          <div className="text-slate-400 text-xs">{t.userId}</div>
-                        </td>
-                        <td className="p-4">
-                          <div className="font-bold text-orange-400">Rp {t.price.toLocaleString()}</div>
-                          <div className="text-slate-500 text-xs">{t.paymentMethod}</div>
-                        </td>
-                        <td className="p-4">
-                          <Badge className={
-                            t.status === 'success' ? 'bg-green-500' : 
-                            t.status === 'failed' ? 'bg-red-500' : 'bg-yellow-500'
-                          }>
-                            {t.status}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="outline" className="h-8 text-[10px]" onClick={() => updateStatus(t.id, 'success')}>Success</Button>
-                            <Button size="sm" variant="outline" className="h-8 text-[10px]" onClick={() => updateStatus(t.id, 'failed')}>Failed</Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="settings">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle>API Digiflazz</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 space-y-6">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center"><RefreshCw className="w-5 h-5" /></div>
+                <h3 className="text-xl font-black text-[#121212]">API Digiflazz</h3>
+              </div>
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Username</Label>
+                  <Label className="text-xs font-bold uppercase text-gray-400 ml-1">Username</Label>
                   <Input 
                     value={digiflazzUsername} 
                     onChange={(e) => setDigiflazzUsername(e.target.value)}
-                    className="glass border-white/10"
+                    className="h-12 rounded-xl border-gray-200 focus:border-[#ff6b00] font-bold"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>API Key</Label>
+                  <Label className="text-xs font-bold uppercase text-gray-400 ml-1">API Key</Label>
                   <Input 
                     type="password"
                     value={digiflazzApiKey} 
                     onChange={(e) => setDigiflazzApiKey(e.target.value)}
-                    className="glass border-white/10"
+                    className="h-12 rounded-xl border-gray-200 focus:border-[#ff6b00] font-bold"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle>API VIPayment</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 space-y-6">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center"><Settings className="w-5 h-5" /></div>
+                <h3 className="text-xl font-black text-[#121212]">API VIPayment</h3>
+              </div>
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Merchant ID</Label>
+                  <Label className="text-xs font-bold uppercase text-gray-400 ml-1">Merchant ID</Label>
                   <Input 
                     value={vipaymentMerchantId} 
                     onChange={(e) => setVipaymentMerchantId(e.target.value)}
-                    className="glass border-white/10"
+                    className="h-12 rounded-xl border-gray-200 focus:border-[#ff6b00] font-bold"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>API Key</Label>
+                  <Label className="text-xs font-bold uppercase text-gray-400 ml-1">API Key</Label>
                   <Input 
                     type="password"
                     value={vipaymentApiKey} 
                     onChange={(e) => setVipaymentApiKey(e.target.value)}
-                    className="glass border-white/10"
+                    className="h-12 rounded-xl border-gray-200 focus:border-[#ff6b00] font-bold"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle>Notifikasi Admin</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>WhatsApp Admin (Untuk OTP)</Label>
-                  <Input 
-                    placeholder="Contoh: 628123456789"
-                    value={whatsapp} 
-                    onChange={(e) => setWhatsapp(e.target.value)}
-                    className="glass border-white/10"
-                  />
-                  <p className="text-[10px] text-slate-500">Nomor ini akan menerima kode OTP setiap kali Anda login ke panel admin.</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 space-y-6">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 bg-green-50 text-green-500 rounded-2xl flex items-center justify-center"><MessageCircle className="w-5 h-5" /></div>
+                <h3 className="text-xl font-black text-[#121212]">Notifikasi Admin</h3>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase text-gray-400 ml-1">WhatsApp Admin (OTP)</Label>
+                <Input 
+                  placeholder="Contoh: 628123456789"
+                  value={whatsapp} 
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  className="h-12 rounded-xl border-gray-200 focus:border-[#ff6b00] font-bold"
+                />
+                <p className="text-[10px] text-gray-400 font-medium">Nomor ini akan menerima kode OTP setiap login admin.</p>
+              </div>
+            </div>
 
-            <Card className="glass-card md:col-span-2">
-              <CardHeader>
-                <CardTitle>Margin Keuntungan (Otomatis)</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 space-y-6 lg:col-span-2">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 bg-orange-50 text-[#ff6b00] rounded-2xl flex items-center justify-center"><Save className="w-5 h-5" /></div>
+                <h3 className="text-xl font-black text-[#121212]">Margin Keuntungan Otomatis</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
-                  <Label>Margin &lt; 10k</Label>
+                  <Label className="text-xs font-bold uppercase text-gray-400 ml-1">Margin &lt; 10k</Label>
                   <Input 
                     type="number"
                     value={marginLow} 
                     onChange={(e) => setMarginLow(Number(e.target.value))}
-                    className="glass border-white/10"
+                    className="h-12 rounded-xl border-gray-200 focus:border-[#ff6b00] font-bold"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Margin 10k - 50k</Label>
+                  <Label className="text-xs font-bold uppercase text-gray-400 ml-1">Margin 10k - 50k</Label>
                   <Input 
                     type="number"
                     value={marginMid} 
                     onChange={(e) => setMarginMid(Number(e.target.value))}
-                    className="glass border-white/10"
+                    className="h-12 rounded-xl border-gray-200 focus:border-[#ff6b00] font-bold"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Margin &gt; 50k</Label>
+                  <Label className="text-xs font-bold uppercase text-gray-400 ml-1">Margin &gt; 50k</Label>
                   <Input 
                     type="number"
                     value={marginHigh} 
                     onChange={(e) => setMarginHigh(Number(e.target.value))}
-                    className="glass border-white/10"
+                    className="h-12 rounded-xl border-gray-200 focus:border-[#ff6b00] font-bold"
                   />
                 </div>
-                <div className="md:col-span-3 pt-4">
-                  <Button className="w-full bg-orange-500" onClick={handleSaveSettings}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Simpan Pengaturan
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="pt-4">
+                <Button className="w-full h-14 bg-[#ff6b00] hover:bg-[#e66000] text-white font-black rounded-2xl shadow-xl shadow-[#ff6b00]/20 transition-all" onClick={handleSaveSettings}>
+                  <Save className="w-5 h-5 mr-2" />
+                  Simpan Semua Pengaturan
+                </Button>
+              </div>
+            </div>
           </div>
         </TabsContent>
       </Tabs>
